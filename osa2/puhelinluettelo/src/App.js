@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
 import Filter from './components/Filter'
-import axios from 'axios'
+import personService from './services/PersonService'
 
 const App = () => {
   const [ persons, setPersons] = useState([
@@ -19,13 +19,18 @@ const App = () => {
 
   useEffect(() => {
     console.log('effect hook')
-    axios
-      .get('http://localhost:3001/persons')
-      .then(response => {
-        console.log('axios promise fulfilled')
-        setPersons(response.data)
-      })
-  }, [])
+    personService
+      .getPersons()
+      .then(initNotes => { setPersons(initNotes) })
+  }
+  , [])
+
+  // Handles showAll when filterName changes --> solve "one-step-behind" filter problem
+  useEffect(() => {
+    console.log('useEffect for filterName')
+    if (filterName !== '' && showAll === true) {setShowAll(!showAll)}
+    if (filterName === '' && showAll === false) {setShowAll(!showAll)}
+  }, [filterName, showAll])
 
   const personsToShow = showAll 
   ? persons 
@@ -35,24 +40,63 @@ const App = () => {
     event.preventDefault()
     console.log('button clicked', event.target)
 
+    const lastId = Math.max.apply(null, persons.id)
+    const newId = lastId + 1
+
     const personObject = {
       name: newName,
       number: newNumber,
-      id: persons.length + 1
+      id: newId
     }
 
     if (persons.find( ({name}) => name === newName)) {
-      window.alert(`${newName} is already added to phonebook `)
+      if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
+        const indexOfExisting = persons.findIndex(person => person.name === newName)
+        const idOfExisting = persons[indexOfExisting].id
+        console.log('idOfExisting: ', idOfExisting)
+
+        const oldNameNewNumber = {
+          name: personObject.name,
+          number: personObject.number,
+          id: idOfExisting
+        }
+
+        personService
+          .putNumber(indexOfExisting+1, oldNameNewNumber)
+          .then(() => {
+            const tempPers = persons
+            tempPers.splice(indexOfExisting, 1, oldNameNewNumber)
+            setPersons(tempPers)
+            setNewName('')
+            setNewNumber('')
+          })  
+      }
     }
     else if (persons.find( ({number}) => number === newNumber)){
-      window.alert(`${newNumber} is already added to phonebook `)
-    } 
+      window.alert(`${newNumber} is already added to phonebook`)
+    }
     else {
-      setPersons(persons.concat(personObject))
-      setNewName('')
+      personService
+        .createPerson(personObject)
+        .then(returnedObject => { 
+          setPersons(persons.concat(returnedObject))
+          setNewName('')
+          setNewNumber('')
+        })
     }
   }
 
+  const deletePerson = (id, name) => {
+    if (window.confirm(`Delete ${name}?`)) {
+      personService
+      .deletePerson(id)
+      .then( () => {
+        const newPersons = persons.filter(person => person.id !== id)
+        setPersons(newPersons)
+      })
+    }
+  }
+ 
   const handleNameChange = (event) => {
     console.log(event.target.value)
     setNewName(event.target.value)
@@ -64,10 +108,7 @@ const App = () => {
   }
 
   const handleFilter = (event) => {
-    if (filterName !== '' && showAll === true) {setShowAll(!showAll)}
-    if (filterName === '' && showAll === false) {setShowAll(!showAll)}
-    console.log(event.target.value)
-    setFilterName(event.target.value)
+    setFilterName(event.target.value) 
   }
 
   return (
@@ -79,7 +120,7 @@ const App = () => {
        handleNameChange={handleNameChange} newNumber={newNumber} 
        handleNumberChange={handleNumberChange}/>
       <h2>Numbers</h2>
-      <Persons persons={personsToShow}/>
+      <Persons persons={personsToShow} deletePerson={deletePerson}/>
     </div>
   )
 }
