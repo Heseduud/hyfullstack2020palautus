@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
 import Filter from './components/Filter'
+import Notification from './components/Notification'
 import personService from './services/PersonService'
+
 
 const App = () => {
   const [ persons, setPersons] = useState([
@@ -16,6 +18,7 @@ const App = () => {
   const [ newNumber, setNewNumber ] = useState('123123')
   const [ filterName, setFilterName ] = useState('')
   const [ showAll, setShowAll] = useState(true)
+  const [ notifMsg, setNotifMsg ] = useState(null)
 
   useEffect(() => {
     console.log('effect hook')
@@ -69,6 +72,10 @@ const App = () => {
             setPersons(tempPers)
             setNewName('')
             setNewNumber('')
+            setNotifMsg(`Modified ${oldNameNewNumber.name}'s number to: ${oldNameNewNumber.number}`)
+            setTimeout(() => {
+              setNotifMsg(null)
+            }, 2000)
           })  
       }
     }
@@ -82,6 +89,10 @@ const App = () => {
           setPersons(persons.concat(returnedObject))
           setNewName('')
           setNewNumber('')
+          setNotifMsg(`Added ${returnedObject.name}`)
+          setTimeout(() => {
+            setNotifMsg(null)
+          }, 2000)
         })
     }
   }
@@ -93,6 +104,10 @@ const App = () => {
       .then( () => {
         const newPersons = persons.filter(person => person.id !== id)
         setPersons(newPersons)
+        setNotifMsg(`Succesfully deleted ${name}`)
+        setTimeout(() => {
+          setNotifMsg(null)
+        }, 2000)
       })
     }
   }
@@ -114,6 +129,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification msg={notifMsg}/>
       <Filter filterName={filterName} handleFilter={handleFilter}/>
       <h2>Add new person</h2>
       <PersonForm addPerson={addPerson} newName={newName}
