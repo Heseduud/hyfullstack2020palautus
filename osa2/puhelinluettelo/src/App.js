@@ -65,7 +65,7 @@ const App = () => {
         }
 
         personService
-          .putNumber(indexOfExisting+1, oldNameNewNumber)
+          .putNumber(idOfExisting, oldNameNewNumber)
           .then(() => {
             const tempPers = persons
             tempPers.splice(indexOfExisting, 1, oldNameNewNumber)
